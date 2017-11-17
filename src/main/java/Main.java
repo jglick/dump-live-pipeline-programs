@@ -2,6 +2,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import org.gridkit.jvmtool.heapdump.HeapWalker;
 import org.netbeans.lib.profiler.heap.Heap;
 import org.netbeans.lib.profiler.heap.HeapFactory;
@@ -36,20 +37,33 @@ public class Main {
             System.out.println(b);
         }
         JavaClass ctgC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsThreadGroup");
-        List<Build> loaded = new ArrayList<>();
         for (Instance ctg : ctgC.getInstances()) {
             System.err.print(".");
             int threadCount = HeapWalker.valueOf(ctg, "threads.size");
             if (threadCount == 0) {
-                continue;
+                continue; // completed, ignore
             }
-            loaded.add(Build.of(HeapWalker.valueOf(ctg, "execution.owner")));
-        }
-        System.err.println();
-        System.err.println("==== Builds with program.dat loaded into memory: ====");
-        Collections.sort(loaded);
-        for (Build b : loaded) {
-            System.out.println(b);
+            Build b = Build.of(HeapWalker.valueOf(ctg, "execution.owner"));
+            if (listed.contains(b)) {
+                continue; // actually running, fine
+            }
+            System.err.println();
+            System.err.println("Found unlisted build " + b + " with " + threadCount + " threads");
+            System.err.println("  scripts.size: " + HeapWalker.valueOf(ctg, "scripts.size"));
+            System.err.println("  execution.heads.size: " + HeapWalker.valueOf(ctg, "execution.heads.size"));
+            // TODO check types of heads (but tricky to navigate a TreeMap)
+            System.err.println("  closures.size: " + HeapWalker.valueOf(ctg, "closures.size"));
+            Instance pp = HeapWalker.valueOf(ctg, "execution.programPromise");
+            System.err.println("  execution.programPromise: " + pp.getJavaClass().getName());
+            Instance sync = HeapWalker.valueOf(pp, "sync");
+            Instance value = HeapWalker.valueOf(sync, "value");
+            if (value != null) {
+                System.err.println("    value: " + value.getJavaClass().getName());
+            }
+            Instance exception = HeapWalker.valueOf(sync, "exception");
+            if (exception != null) {
+                System.err.println("    exception: " + exception.getJavaClass().getName() + ": " + HeapWalker.valueOf(exception, "detailMessage"));
+            }
         }
     }
     static class Build implements Comparable<Build> {
@@ -68,6 +82,13 @@ public class Main {
         }
         @Override public String toString() {
             return job + " #" + num;
+        }
+        @Override public int hashCode() {
+            return job.hashCode() ^ num;
+        }
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof Build && job.equals(((Build) obj).job) && num == ((Build) obj).num;
         }
     }
 }
