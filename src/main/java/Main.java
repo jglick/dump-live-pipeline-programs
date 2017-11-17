@@ -39,6 +39,10 @@ public class Main {
         List<Build> loaded = new ArrayList<>();
         for (Instance ctg : ctgC.getInstances()) {
             System.err.print(".");
+            int threadCount = HeapWalker.valueOf(ctg, "threads.size");
+            if (threadCount == 0) {
+                continue;
+            }
             loaded.add(Build.of(HeapWalker.valueOf(ctg, "execution.owner")));
         }
         System.err.println();
