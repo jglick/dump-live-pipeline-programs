@@ -1,6 +1,7 @@
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import org.gridkit.jvmtool.heapdump.HeapWalker;
@@ -43,7 +44,8 @@ public class Main {
             if (threadCount == 0) {
                 continue; // completed, ignore
             }
-            Build b = Build.of(HeapWalker.valueOf(ctg, "execution.owner"));
+            Instance owner = HeapWalker.valueOf(ctg, "execution.owner");
+            Build b = Build.of(owner);
             if (listed.contains(b)) {
                 continue; // actually running, fine
             }
@@ -64,6 +66,19 @@ public class Main {
             if (exception != null) {
                 System.err.println("    exception: " + exception.getJavaClass().getName() + ": " + HeapWalker.valueOf(exception, "detailMessage"));
             }
+            Instance result = HeapWalker.valueOf(owner, "run.result");
+            System.err.println("  result: " + (result != null ? HeapWalker.valueOf(result, "name") : null));
+            long startTime = HeapWalker.valueOf(owner, "run.startTime");
+            System.err.println("  start time: " + new Date(startTime));
+            long duration = HeapWalker.valueOf(owner, "run.duration");
+            if (duration != 0) {
+                System.err.println("  duration: " + (duration / 1000) + "s");
+            }
+            boolean firstTime = HeapWalker.valueOf(owner, "run.firstTime");
+            System.err.println("  firstTime: " + firstTime);
+            Instance completed = HeapWalker.valueOf(owner, "run.completed");
+            System.err.println("  completed: " + (completed != null ? HeapWalker.valueOf(completed, "value") : null));
+            System.err.println("  logsToCopy? " + (HeapWalker.valueOf(owner, "run.logsToCopy") != null));
         }
     }
     static class Build implements Comparable<Build> {
