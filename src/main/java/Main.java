@@ -1,9 +1,10 @@
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import org.gridkit.jvmtool.heapdump.HeapWalker;
 import org.netbeans.lib.profiler.heap.Heap;
 import org.netbeans.lib.profiler.heap.HeapFactory;
@@ -13,9 +14,11 @@ import org.netbeans.lib.profiler.heap.ObjectArrayInstance;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        System.err.println("Parsing...");
-        Heap heap = HeapFactory.createFastHeap(new File(args[0]));
-        System.err.print("Scanning");
+        File dump = new File(args[0]);
+        System.err.print("Loading " + dump + "...");
+        Heap heap = HeapFactory.createFastHeap(dump);
+        System.err.println();
+        System.err.print("Looking for builds thought be running according to FlowExecutionList");
         JavaClass felC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.flow.FlowExecutionList");
         List<Instance> fels = felC.getInstances();
         if (fels.size() != 1) {
@@ -26,19 +29,22 @@ public class Main {
         ObjectArrayInstance elementsA = HeapWalker.valueOf(list, "elementData"); // TODO docs claim this would return Object[], but CONVERTERS does not actually do that
         List<Instance> elements = elementsA.getValues();
         int size = HeapWalker.valueOf(list, "size");
-        List<Build> listed = new ArrayList<>();
+        Set<Build> listed = new TreeSet<>();
         for (int i = 0; i < size; i++) {
             System.err.print(".");
-            listed.add(Build.of(elements.get(i)));
+            Build b = Build.of(elements.get(i));
+            if (!listed.add(b)) {
+                System.err.print("(duplicated " + b + ")");
+            }
         }
-        System.err.println();
-        System.err.println("==== Builds thought to be running according to FlowExecutionList: ====");
-        Collections.sort(listed);
+        System.err.println("found " + listed.size() + ".");
         for (Build b : listed) {
             System.out.println(b);
         }
-        JavaClass ctgC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsThreadGroup");
-        for (Instance ctg : ctgC.getInstances()) {
+        System.err.println();
+        System.err.print("Looking for unlisted builds with program.dat loaded");
+        Map<Build, Instance> ctgs = new TreeMap<>();
+        for (Instance ctg : heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsThreadGroup").getInstances()) {
             System.err.print(".");
             int threadCount = HeapWalker.valueOf(ctg, "threads.size");
             if (threadCount == 0) {
@@ -49,8 +55,15 @@ public class Main {
             if (listed.contains(b)) {
                 continue; // actually running, fine
             }
-            System.err.println();
-            System.err.println("Found unlisted build " + b + " with " + threadCount + " threads");
+            if (ctgs.put(b, ctg) != null) {
+                System.err.print("(duplicated " + b + ")");
+            }
+        }
+        System.err.println("found " + ctgs.size() + ".");
+        ctgs.forEach((b, ctg) -> {
+            Instance owner = HeapWalker.valueOf(ctg, "execution.owner");
+            System.err.println(b);
+            System.err.println("  threads.size:  " + HeapWalker.valueOf(ctg, "threads.size"));
             System.err.println("  scripts.size: " + HeapWalker.valueOf(ctg, "scripts.size"));
             System.err.println("  execution.heads.size: " + HeapWalker.valueOf(ctg, "execution.heads.size"));
             // TODO check types of heads (but tricky to navigate a TreeMap)
@@ -79,6 +92,25 @@ public class Main {
             Instance completed = HeapWalker.valueOf(owner, "run.completed");
             System.err.println("  completed: " + (completed != null ? HeapWalker.valueOf(completed, "value") : null));
             System.err.println("  logsToCopy? " + (HeapWalker.valueOf(owner, "run.logsToCopy") != null));
+        });
+        System.err.println();
+        System.err.print("Looking for unlisted builds with GroovyClassLoader leaked");
+        Set<Build> leaked = new TreeSet<>();
+        for (Instance cgstl : heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsGroovyShell$TimingLoader").getInstances()) {
+            System.err.print(".");
+            Build b = Build.of(HeapWalker.valueOf(cgstl, "execution.owner"));
+            if (listed.contains(b)) {
+                continue; // actually running, fine
+            }
+            if (!leaked.add(b)) {
+                /* Too noisy, and that not interesting:
+                System.err.print("(duplicated " + b + ")");
+                */
+            }
+        }
+        System.err.println("found " + leaked.size() + ".");
+        for (Build b : leaked) {
+            System.err.println(b);
         }
     }
     static class Build implements Comparable<Build> {
