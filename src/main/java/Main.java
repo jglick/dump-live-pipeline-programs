@@ -18,7 +18,7 @@ public class Main {
         System.err.print("Loading " + dump + "...");
         Heap heap = HeapFactory.createFastHeap(dump);
         System.err.println();
-        System.err.print("Looking for builds thought be running according to FlowExecutionList");
+        System.err.print("Looking for builds thought be running according to FlowExecutionList...");
         JavaClass felC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.flow.FlowExecutionList");
         List<Instance> fels = felC.getInstances();
         if (fels.size() != 1) {
@@ -40,7 +40,7 @@ public class Main {
         System.err.println("found " + listed.size() + ".");
         listed.forEach(System.err::println);
         System.err.println();
-        System.err.print("Looking for flyweight executors running unlisted builds");
+        System.err.print("Looking for flyweight executors running unlisted builds...");
         Set<Build> executing = new TreeSet<>();
         for (Instance ooe : heap.getJavaClassByName("hudson.model.OneOffExecutor").getInstances()) {
             System.err.print(".");
@@ -59,7 +59,7 @@ public class Main {
         System.err.println("found " + executing.size() + ".");
         executing.forEach(System.err::println);
         System.err.println();
-        System.err.print("Looking for unlisted builds with program.dat loaded");
+        System.err.print("Looking for unlisted builds with program.dat loaded...");
         Map<Build, Instance> ctgs = new TreeMap<>();
         for (Instance ctg : heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsThreadGroup").getInstances()) {
             System.err.print(".");
@@ -111,7 +111,7 @@ public class Main {
             System.err.println("  logsToCopy? " + (HeapWalker.valueOf(owner, "run.logsToCopy") != null));
         });
         System.err.println();
-        System.err.print("Looking for unlisted builds with GroovyClassLoader leaked");
+        System.err.print("Looking for unlisted builds with GroovyClassLoader leaked...");
         Set<Build> leaked = new TreeSet<>();
         for (Instance cgstl : heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsGroovyShell$TimingLoader").getInstances()) {
             System.err.print(".");
