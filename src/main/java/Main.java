@@ -38,9 +38,26 @@ public class Main {
             }
         }
         System.err.println("found " + listed.size() + ".");
-        for (Build b : listed) {
-            System.out.println(b);
+        listed.forEach(System.err::println);
+        System.err.println();
+        System.err.print("Looking for flyweight executors running unlisted builds");
+        Set<Build> executing = new TreeSet<>();
+        for (Instance ooe : heap.getJavaClassByName("hudson.model.OneOffExecutor").getInstances()) {
+            System.err.print(".");
+            Instance owner = HeapWalker.valueOf(ooe, "executable.execution.owner");
+            if (owner == null) {
+                continue; // running something else, fine
+            }
+            Build b = Build.of(owner);
+            if (listed.contains(b)) {
+                continue; // actually running, fine
+            }
+            if (!executing.add(b)) {
+                System.err.print("(duplicated " + b + ")");
+            }
         }
+        System.err.println("found " + executing.size() + ".");
+        executing.forEach(System.err::println);
         System.err.println();
         System.err.print("Looking for unlisted builds with program.dat loaded");
         Map<Build, Instance> ctgs = new TreeMap<>();
@@ -109,9 +126,7 @@ public class Main {
             }
         }
         System.err.println("found " + leaked.size() + ".");
-        for (Build b : leaked) {
-            System.err.println(b);
-        }
+        leaked.forEach(System.err::println);
     }
     static class Build implements Comparable<Build> {
         static Build of(Instance owner) { // WorkflowRun$Owner
@@ -133,8 +148,7 @@ public class Main {
         @Override public int hashCode() {
             return job.hashCode() ^ num;
         }
-        @Override
-        public boolean equals(Object obj) {
+        @Override public boolean equals(Object obj) {
             return obj instanceof Build && job.equals(((Build) obj).job) && num == ((Build) obj).num;
         }
     }
