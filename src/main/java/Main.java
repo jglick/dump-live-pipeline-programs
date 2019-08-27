@@ -63,12 +63,16 @@ public class Main {
         Map<Build, Instance> ctgs = new TreeMap<>();
         for (Instance ctg : heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsThreadGroup").getInstances()) {
             System.err.print(".");
-            int threadCount = HeapWalker.valueOf(ctg, "threads.size");
-            if (threadCount == 0) {
-                continue; // completed, ignore
-            }
             Instance owner = HeapWalker.valueOf(ctg, "execution.owner");
             Build b = Build.of(owner);
+            Integer scriptSize = HeapWalker.valueOf(ctg, "scripts.size"); // TreeMap
+            if (scriptSize == null) {
+                System.err.print("(possibly broken " + b + ")");
+                continue;
+            }
+            if (scriptSize == 0) {
+                continue; // completed, ignore
+            }
             if (listed.contains(b)) {
                 continue; // actually running, fine
             }
