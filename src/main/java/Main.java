@@ -84,7 +84,6 @@ public class Main {
         ctgs.forEach((b, ctg) -> {
             Instance owner = HeapWalker.valueOf(ctg, "execution.owner");
             System.err.println(b);
-            System.err.println("  threads.size:  " + HeapWalker.valueOf(ctg, "threads.size"));
             System.err.println("  scripts.size: " + HeapWalker.valueOf(ctg, "scripts.size"));
             System.err.println("  execution.heads.size: " + HeapWalker.valueOf(ctg, "execution.heads.size"));
             // TODO check types of heads (but tricky to navigate a TreeMap)
