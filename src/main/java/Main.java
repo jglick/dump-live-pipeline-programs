@@ -110,9 +110,8 @@ public class Main {
             }
             boolean firstTime = HeapWalker.valueOf(owner, "run.firstTime");
             System.err.println("  firstTime: " + firstTime);
-            Instance completed = HeapWalker.valueOf(owner, "run.completed");
-            System.err.println("  completed: " + (completed != null ? HeapWalker.valueOf(completed, "value") : null));
-            System.err.println("  logsToCopy? " + (HeapWalker.valueOf(owner, "run.logsToCopy") != null));
+            Boolean completed = HeapWalker.valueOf(owner, "run.completed");
+            System.err.println("  completed: " + completed);
         });
         System.err.println();
         System.err.print("Looking for unlisted builds with GroovyClassLoader leaked...");
