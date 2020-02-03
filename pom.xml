@@ -40,4 +40,9 @@
             </plugin>
         </plugins>
     </build>
+    <scm>
+        <connection>scm:git:git://github.com/jglick/${project.artifactId}.git</connection>
+        <developerConnection>scm:git:git@github.com:jglick/${project.artifactId}.git</developerConnection>
+        <url>https://github.com/jglick/${project.artifactId}</url>
+    </scm>
 </project>
