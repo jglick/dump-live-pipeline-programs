@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.jglick</groupId>
     <artifactId>dump-live-pipeline-programs</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <dependencies>
         <dependency> <!-- https://github.com/aragozin/jvm-tools/tree/master/hprof-heap -->
             <groupId>org.gridkit.jvmtool</groupId>
@@ -44,5 +44,6 @@
         <connection>scm:git:git://github.com/jglick/${project.artifactId}.git</connection>
         <developerConnection>scm:git:git@github.com:jglick/${project.artifactId}.git</developerConnection>
         <url>https://github.com/jglick/${project.artifactId}</url>
-    </scm>
+      <tag>dump-live-pipeline-programs-1.0</tag>
+  </scm>
 </project>
