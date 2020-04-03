@@ -132,20 +132,23 @@ public class Main {
     }
     static class Build implements Comparable<Build> {
         static Build of(Instance owner) { // WorkflowRun$Owner
-            return new Build(HeapWalker.valueOf(owner, "job"), Integer.parseInt(HeapWalker.valueOf(owner, "id")));
+            Instance run = HeapWalker.valueOf(owner, "run");
+            return new Build(HeapWalker.valueOf(owner, "job"), Integer.parseInt(HeapWalker.valueOf(owner, "id")), run == null ? null : run.getInstanceId());
         }
         final String job;
         final int num;
-        Build(String job, int num) {
+        final Long id; // Heap address
+        Build(String job, int num, Long id) {
             this.job = job;
             this.num = num;
+            this.id = id;
         }
         @Override public int compareTo(Build o) {
             int c = job.compareTo(o.job);
             return c != 0 ? c : num - o.num;
         }
         @Override public String toString() {
-            return job + " #" + num;
+            return job + " #" + num + (id == null ? "" : "@" + id);
         }
         @Override public int hashCode() {
             return job.hashCode() ^ num;
