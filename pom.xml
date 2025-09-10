@@ -7,8 +7,8 @@
     <dependencies>
         <dependency> <!-- https://github.com/aragozin/jvm-tools/tree/master/hprof-heap -->
             <groupId>org.gridkit.jvmtool</groupId>
-            <artifactId>hprof-heap</artifactId>
-            <version>0.8.1</version>
+            <artifactId>heaplib</artifactId>
+            <version>0.2</version>
         </dependency>
     </dependencies>
     <properties>
