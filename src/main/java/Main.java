@@ -19,12 +19,25 @@ public class Main {
         Heap heap = HeapFactory.createFastHeap(dump);
         System.err.println();
         System.err.print("Looking for builds thought be running according to FlowExecutionList...");
-        JavaClass felC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.flow.FlowExecutionList");
-        List<Instance> fels = felC.getInstances();
-        if (fels.size() != 1) {
-            throw new IllegalStateException("unexpected FlowExecutionList count: " + fels);
+        Instance fel = null;
+        JavaClass feldsC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.flow.FlowExecutionList$DefaultStorage");
+        if (feldsC != null) {
+            List<Instance> feldss = feldsC.getInstances();
+            if (feldss.size() != 1) {
+                throw new IllegalStateException("unexpected FlowExecutionList$DefaultStorage count: " + feldss);
+            }
+            fel = feldss.get(0);
+        } else {
+            JavaClass felC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.flow.FlowExecutionList");
+            List<Instance> fels = felC.getInstances();
+            if (fels.size() != 1) {
+                throw new IllegalStateException("unexpected FlowExecutionList count: " + fels);
+            }
+            fel = fels.get(0);
         }
-        Instance fel = fels.get(0);
+        if (fel == null) {
+            throw new IllegalStateException("FlowExecutionList custom storage not supported");
+        }
         Instance list = HeapWalker.valueOf(fel, "runningTasks.core"); // ArrayList
         ObjectArrayInstance elementsA = HeapWalker.valueOf(list, "elementData"); // TODO docs claim this would return Object[], but CONVERTERS does not actually do that
         List<Instance> elements = elementsA.getValues();
