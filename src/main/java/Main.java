@@ -19,12 +19,25 @@ public class Main {
         Heap heap = HeapFactory.createFastHeap(dump);
         System.err.println();
         System.err.print("Looking for builds thought be running according to FlowExecutionList...");
-        JavaClass felC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.flow.FlowExecutionList");
-        List<Instance> fels = felC.getInstances();
-        if (fels.size() != 1) {
-            throw new IllegalStateException("unexpected FlowExecutionList count: " + fels);
+        Instance fel = null;
+        JavaClass feldsC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.flow.FlowExecutionList$DefaultStorage");
+        if (feldsC != null) {
+            List<Instance> feldss = feldsC.getInstances();
+            if (feldss.size() != 1) {
+                throw new IllegalStateException("unexpected FlowExecutionList$DefaultStorage count: " + feldss);
+            }
+            fel = feldss.get(0);
+        } else {
+            JavaClass felC = heap.getJavaClassByName("org.jenkinsci.plugins.workflow.flow.FlowExecutionList");
+            List<Instance> fels = felC.getInstances();
+            if (fels.size() != 1) {
+                throw new IllegalStateException("unexpected FlowExecutionList count: " + fels);
+            }
+            fel = fels.get(0);
         }
-        Instance fel = fels.get(0);
+        if (fel == null) {
+            throw new IllegalStateException("FlowExecutionList custom storage not supported");
+        }
         Instance list = HeapWalker.valueOf(fel, "runningTasks.core"); // ArrayList
         ObjectArrayInstance elementsA = HeapWalker.valueOf(list, "elementData"); // TODO docs claim this would return Object[], but CONVERTERS does not actually do that
         List<Instance> elements = elementsA.getValues();
@@ -32,7 +45,7 @@ public class Main {
         Set<Build> listed = new TreeSet<>();
         for (int i = 0; i < size; i++) {
             System.err.print(".");
-            Build b = Build.of(elements.get(i));
+            Build b = Build.of(elements.get(i), fel);
             if (!listed.add(b)) {
                 System.err.print("(duplicated " + b + ")");
             }
@@ -48,7 +61,7 @@ public class Main {
             if (owner == null) {
                 continue; // running something else, fine
             }
-            Build b = Build.of(owner);
+            Build b = Build.of(owner, ooe);
             if (listed.contains(b)) {
                 continue; // actually running, fine
             }
@@ -64,7 +77,7 @@ public class Main {
         for (Instance ctg : heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsThreadGroup").getInstances()) {
             System.err.print(".");
             Instance owner = HeapWalker.valueOf(ctg, "execution.owner");
-            Build b = Build.of(owner);
+            Build b = Build.of(owner, ctg);
             Integer scriptSize = HeapWalker.valueOf(ctg, "scripts.size"); // TreeMap
             if (scriptSize == null) {
                 System.err.print("(possibly broken " + b + ")");
@@ -117,7 +130,7 @@ public class Main {
         Set<Build> leaked = new TreeSet<>();
         for (Instance cgstl : heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsGroovyShell$TimingLoader").getInstances()) {
             System.err.print(".");
-            Build b = Build.of(HeapWalker.valueOf(cgstl, "execution.owner"));
+            Build b = Build.of(HeapWalker.valueOf(cgstl, "execution.owner"), cgstl);
             if (listed.contains(b)) {
                 continue; // actually running, fine
             }
@@ -131,24 +144,31 @@ public class Main {
         leaked.forEach(System.err::println);
     }
     static class Build implements Comparable<Build> {
-        static Build of(Instance owner) { // WorkflowRun$Owner
+        static Build of(Instance owner, Instance related) { // WorkflowRun$Owner
             Instance run = HeapWalker.valueOf(owner, "run");
-            return new Build(HeapWalker.valueOf(owner, "job"), Integer.parseInt(HeapWalker.valueOf(owner, "id")), run == null ? null : run.getInstanceId());
+            return new Build(
+                    HeapWalker.valueOf(owner, "job"),
+                    Integer.parseInt(HeapWalker.valueOf(owner, "id")),
+                    run == null ? null : run.getInstanceId(),
+                    related == null ? null : related.getInstanceId());
         }
         final String job;
         final int num;
         final Long id; // Heap address
-        Build(String job, int num, Long id) {
+        final Long relatedId; // Heap address of whatever object was used to find the WorkflowRun object
+        Build(String job, int num, Long id, Long relatedId) {
             this.job = job;
             this.num = num;
             this.id = id;
+            this.relatedId = relatedId;
         }
         @Override public int compareTo(Build o) {
             int c = job.compareTo(o.job);
             return c != 0 ? c : num - o.num;
         }
         @Override public String toString() {
-            return job + " #" + num + (id == null ? "" : "@" + id);
+            String relatedString = relatedId == null ? "" : " (via: 0x" + Long.toHexString(relatedId) + ")";
+            return job + " #" + num + (id == null ? "" : "@0x" + Long.toHexString(id)) + relatedString;
         }
         @Override public int hashCode() {
             return job.hashCode() ^ num;
