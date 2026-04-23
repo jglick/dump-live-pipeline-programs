@@ -96,6 +96,7 @@ public class Main {
         System.err.println();
         System.err.print("Looking for unlisted builds with program.dat loaded...");
         Map<Build, Instance> ctgs = new TreeMap<>();
+        int running = 0;
         for (Instance ctg : heap.getJavaClassByName("org.jenkinsci.plugins.workflow.cps.CpsThreadGroup").getInstances()) {
             System.err.print(".");
             Instance owner = HeapWalker.valueOf(ctg, "execution.owner");
@@ -108,6 +109,7 @@ public class Main {
             if (scriptSize == 0) {
                 continue; // completed, ignore
             }
+            running++;
             if (listed.contains(b.asListedBuild())) {
                 continue; // actually running, fine
             }
@@ -115,7 +117,7 @@ public class Main {
                 System.err.print("(duplicated " + b + ")");
             }
         }
-        System.err.println("found " + ctgs.size() + ".");
+        System.err.println("found " + ctgs.size() + " (compared to " + (running - ctgs.size()) + " legitimately running).");
         ctgs.forEach((b, ctg) -> {
             Instance owner = HeapWalker.valueOf(ctg, "execution.owner");
             System.err.println(b);
