@@ -136,7 +136,7 @@ public class Main {
                     System.err.println("    exception: " + exception.getJavaClass().getName() + ": " + HeapWalker.valueOf(exception, "detailMessage"));
                 }
             } else {
-                Instance value = HeapWalker.valueOf(pp, "value");
+                Instance value = HeapWalker.valueOf(pp, "valueField");
                 if (value != null) {
                     System.err.println("    value: " + value.getJavaClass().getName());
                 }
